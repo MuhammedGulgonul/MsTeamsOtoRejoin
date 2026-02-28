@@ -84,7 +84,7 @@ def get_teams_windows():
 def has_meeting_window(windows):
     for hwnd, title in windows:
         t = title.lower()
-        if "daraltılmış" in t or "daraltilmis" in t or "meeting" in t or "call" in t:
+        if "daraltılmış" in t or "daraltilmis" in t or "meeting" in t or "call" in t or "toplantı" in t or "toplanti" in t:
             return True
     return False
 
@@ -182,39 +182,16 @@ class TeamsMonitor:
         ts = datetime.now().strftime("%H:%M:%S")
         self.gui.add_log(f"[{ts}] {msg}")
 
-    def _minimize_meeting(self):
-        """Toplantı penceresini arka plana at, Sohbet penceresini gizle."""
-        try:
-            for hwnd, title in get_teams_windows():
-                t = title.lower()
-                if "daraltılmış" in t or "daraltilmis" in t:
-                    win32gui.SetWindowPos(hwnd, win32con.HWND_BOTTOM, 0, 0, 0, 0,
-                        win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE)
-                    self.log("✓ Toplantı penceresi arka plana atıldı")
-        except Exception:
-            pass
-        self._hide_sohbet()
+    def _push_sohbet_back(self):
+        """Sohbete dokunmuyoruz, olduğu gibi kalıyor."""
+        pass
 
-    def _hide_sohbet(self):
-        """Sohbet penceresini arka plana at (görev çubuğunda kalır)."""
-        try:
-            for hwnd, title in get_teams_windows():
-                if "sohbet" in title.lower() or "chat" in title.lower():
-                    win32gui.SetWindowPos(hwnd, win32con.HWND_BOTTOM, 0, 0, 0, 0,
-                        win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE)
-                    self.log("✓ Sohbet penceresi arka plana atıldı")
-                    return
-        except Exception:
-            pass
-
-    def _wait_and_minimize(self):
+    def _wait_for_meeting(self):
         self.log("Toplantı penceresi bekleniyor...")
         for _ in range(15):
             time.sleep(2)
             if has_meeting_window(get_teams_windows()):
                 self.log("✓ Toplantı penceresi açıldı!")
-                time.sleep(1)
-                self._minimize_meeting()
                 self.had_meeting = True
                 return
         self.log("⚠ Toplantı penceresi 30sn içinde açılmadı")
@@ -247,7 +224,8 @@ class TeamsMonitor:
             self.rejoin_count += 1
             self.log(f"✓ Tıklandı! (toplam: {self.rejoin_count})")
             self.gui.update_count(self.rejoin_count)
-            self._wait_and_minimize()
+            self._wait_for_meeting()
+            self._push_sohbet_back()
         else:
             self.log("✗ Buton bulunamadı")
         self.last_click = time.time()
@@ -257,7 +235,8 @@ class TeamsMonitor:
         self.log("Toplantıdan çıkılıyor...")
         try:
             app = Desktop(backend="uia")
-            wins = app.windows(title_re=".*[Dd]aralt.*")
+            # Hem daraltılmış hem büyütülmüş (toplantı) pencereleri bul
+            wins = app.windows(title_re=".*([Dd]aralt|[Tt]oplant).*")
             if not wins:
                 self.log("✗ Toplantı penceresi bulunamadı")
                 return
@@ -271,6 +250,7 @@ class TeamsMonitor:
                         return
                 except Exception:
                     pass
+            
             self.log("✗ Ayrıl butonu bulunamadı")
         except Exception as e:
             self.log(f"Hata: {e}")
@@ -301,7 +281,8 @@ class TeamsMonitor:
                             self.rejoin_count += 1
                             self.log(f"✓ Tıklandı! (toplam: {self.rejoin_count})")
                             self.gui.update_count(self.rejoin_count)
-                            self._wait_and_minimize()
+                            self._wait_for_meeting()
+                            self._push_sohbet_back()
                             self.gui.set_status("Çalışıyor", "#00c853")
                         else:
                             self.log("✗ Katılma başarısız")
@@ -310,7 +291,7 @@ class TeamsMonitor:
 
                 elif has_mtg and not self.had_meeting:
                     self.log("✓ Toplantı penceresi tekrar mevcut")
-                    self._minimize_meeting()
+                    self._push_sohbet_back()
                     self.gui.set_status("Çalışıyor", "#00c853")
 
                 self.had_meeting = has_mtg
