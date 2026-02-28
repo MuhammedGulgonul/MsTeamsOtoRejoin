@@ -94,7 +94,7 @@ def invisible_click():
     try:
         import ctypes
         app = Desktop(backend="uia")
-        wins = app.windows(title_re=".*Teams.*")
+        wins = app.windows(title_re=".*Microsoft Teams.*")
         if not wins:
             return False
 
@@ -183,11 +183,26 @@ class TeamsMonitor:
         self.gui.add_log(f"[{ts}] {msg}")
 
     def _minimize_meeting(self):
+        """Toplantı penceresini arka plana at, Sohbet penceresini gizle."""
         try:
             for hwnd, title in get_teams_windows():
-                if "daraltılmış" in title.lower() or "daraltilmis" in title.lower():
-                    win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
-                    self.log("✓ Toplantı penceresi minimize edildi")
+                t = title.lower()
+                if "daraltılmış" in t or "daraltilmis" in t:
+                    win32gui.SetWindowPos(hwnd, win32con.HWND_BOTTOM, 0, 0, 0, 0,
+                        win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE)
+                    self.log("✓ Toplantı penceresi arka plana atıldı")
+        except Exception:
+            pass
+        self._hide_sohbet()
+
+    def _hide_sohbet(self):
+        """Sohbet penceresini arka plana at (görev çubuğunda kalır)."""
+        try:
+            for hwnd, title in get_teams_windows():
+                if "sohbet" in title.lower() or "chat" in title.lower():
+                    win32gui.SetWindowPos(hwnd, win32con.HWND_BOTTOM, 0, 0, 0, 0,
+                        win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE)
+                    self.log("✓ Sohbet penceresi arka plana atıldı")
                     return
         except Exception:
             pass
