@@ -16,10 +16,7 @@ Microsoft Teams toplantısından atıldığında **otomatik olarak tekrar katıl
 
 **Gereksinim:** [Python 3.8+](https://www.python.org/downloads/) (kurulumda "Add to PATH" seçeneğini işaretleyin)
 
-```bash
-git clone https://github.com/KULLANICI/msteams.git
-cd msteams
-```
+
 
 İlk çalıştırmada gerekli paketler (`pywinauto`, `pywin32`) **otomatik kurulur**.
 
